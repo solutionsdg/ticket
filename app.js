@@ -1,5 +1,5 @@
 // Teszt jegyértékesítő rendszer - csak HTML + JS
-// GitHub Pages-en is fut. Nincs backend, nincs valódi fizetés.
+// Nincs backend, nincs valódi fizetés.
 // A rendelések a böngésző localStorage tárhelyére mentődnek.
 
 const TICKETS = [
@@ -32,8 +32,8 @@ const TICKETS = [
   }
 ];
 
-const STORAGE_ORDERS = "ticket_demo_orders_v1";
-const STORAGE_CART = "ticket_demo_cart_v1";
+const STORAGE_ORDERS = "ticket_demo_orders_v2_qr";
+const STORAGE_CART = "ticket_demo_cart_v2_qr";
 const ADMIN_PASSWORD = "admin123";
 
 let cart = loadCart();
@@ -162,7 +162,6 @@ function renderCart() {
   if (ids.length === 0) {
     $("cartItems").innerHTML = `<p>A kosár üres.</p>`;
     $("checkoutBox").classList.add("hidden");
-    $("successBox").classList.add("hidden");
   } else {
     $("cartItems").innerHTML = ids.map(id => {
       const ticket = getTicket(id);
@@ -261,16 +260,24 @@ function finishOrder() {
   $("buyerEmail").value = "";
   $("buyerNote").value = "";
 
+  const qrCards = order.items.flatMap(item =>
+    item.codes.map(code => `
+      <div class="qr-card">
+        <b>${escapeHtml(item.name)}</b>
+        <span class="code">${escapeHtml(code)}</span>
+        ${makeQrSvg(code, 132)}
+      </div>
+    `)
+  ).join("");
+
   $("successBox").classList.remove("hidden");
   $("successBox").innerHTML = `
     <h3>Sikeres teszt vásárlás</h3>
-    <p>Rendeléskód: <span class="code">${order.orderCode}</span></p>
-    <p>Jegykódok:</p>
-    ${order.items.map(item => `
-      <p><b>${escapeHtml(item.name)}</b><br>
-      ${item.codes.map(c => `<span class="code">${c}</span>`).join(" ")}</p>
-    `).join("")}
+    <p>Rendeléskód: <span class="code">${escapeHtml(order.orderCode)}</span></p>
     <p>Összeg: <b>${formatFt(order.total)}</b></p>
+    <h4>Jegyek QR-kóddal</h4>
+    <div class="qr-grid">${qrCards}</div>
+    <button class="secondary" onclick="window.print()" style="margin-top:14px;">Jegyek nyomtatása</button>
   `;
 }
 
@@ -327,7 +334,7 @@ function renderAdmin() {
   $("orderRows").innerHTML = filtered.length ? filtered.map(order => `
     <tr>
       <td>${formatDate(order.createdAt)}</td>
-      <td><span class="code">${order.orderCode}</span><br><small>${order.status}</small></td>
+      <td><span class="code">${escapeHtml(order.orderCode)}</span><br><small>${order.status}</small></td>
       <td>
         <b>${escapeHtml(order.buyer.name)}</b><br>
         <small>${escapeHtml(order.buyer.email)}</small>
@@ -339,8 +346,13 @@ function renderAdmin() {
       </td>
       <td>
         ${order.items.flatMap(item => item.codes)
-          .map(code => `<span class="code">${code}</span>`)
-          .join("<br>")}
+          .map(code => `
+            <div class="qr-small">
+              <span class="code">${escapeHtml(code)}</span>
+              ${makeQrSvg(code, 76)}
+            </div>
+          `)
+          .join("")}
       </td>
       <td><b>${formatFt(order.total)}</b></td>
       <td>${escapeHtml(order.note || "-")}</td>
@@ -488,6 +500,245 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+/*
+  Beépített QR-kód generátor.
+  Fix QR verzió: 3-L, byte mód, rövid jegykódokra.
+  Így nem kell külső CDN vagy plusz fájl.
+*/
+function makeQrSvg(text, pixelSize = 132) {
+  const matrix = createQrMatrix(String(text));
+  const border = 4;
+  const n = matrix.length;
+  const full = n + border * 2;
+  const scale = pixelSize / full;
+
+  let path = "";
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (matrix[y][x]) {
+        path += `M${x + border},${y + border}h1v1h-1z`;
+      }
+    }
+  }
+
+  return `
+    <svg viewBox="0 0 ${full} ${full}" width="${pixelSize}" height="${pixelSize}" role="img" aria-label="QR kód">
+      <rect width="${full}" height="${full}" fill="#fff"></rect>
+      <path d="${path}" fill="#111"></path>
+    </svg>
+  `;
+}
+
+function createQrMatrix(text) {
+  const version = 3;
+  const size = 4 * version + 17;
+  const dataCodewords = 55;
+  const eccCodewords = 15;
+  const mask = 0;
+
+  const bytes = utf8Bytes(text);
+  if (bytes.length > 48) {
+    throw new Error("A QR-kód adata túl hosszú ehhez a demo generátorhoz.");
+  }
+
+  const data = makeDataCodewords(bytes, dataCodewords);
+  const ecc = reedSolomonRemainder(data, reedSolomonDivisor(eccCodewords));
+  const allCodewords = data.concat(ecc);
+
+  const modules = Array.from({ length: size }, () => Array(size).fill(false));
+  const isFunction = Array.from({ length: size }, () => Array(size).fill(false));
+
+  const setModule = (x, y, dark, func = true) => {
+    if (x >= 0 && y >= 0 && x < size && y < size) {
+      modules[y][x] = !!dark;
+      if (func) isFunction[y][x] = true;
+    }
+  };
+
+  drawFinder(0, 0, setModule, size);
+  drawFinder(size - 7, 0, setModule, size);
+  drawFinder(0, size - 7, setModule, size);
+
+  drawAlignment(22, 22, setModule);
+
+  for (let i = 8; i < size - 8; i++) {
+    const dark = i % 2 === 0;
+    setModule(i, 6, dark);
+    setModule(6, i, dark);
+  }
+
+  drawFormatBits(modules, isFunction, size, mask);
+
+  const bits = [];
+  for (const b of allCodewords) appendBits(bits, b, 8);
+
+  let bitIndex = 0;
+  let upward = true;
+  for (let right = size - 1; right > 0; right -= 2) {
+    if (right === 6) right--;
+
+    for (let vert = 0; vert < size; vert++) {
+      const y = upward ? size - 1 - vert : vert;
+      for (let j = 0; j < 2; j++) {
+        const x = right - j;
+        if (!isFunction[y][x]) {
+          let bit = bitIndex < bits.length ? bits[bitIndex] : 0;
+          bitIndex++;
+          if (((x + y) % 2) === 0) bit ^= 1;
+          modules[y][x] = !!bit;
+        }
+      }
+    }
+
+    upward = !upward;
+  }
+
+  drawFormatBits(modules, isFunction, size, mask);
+  return modules;
+}
+
+function makeDataCodewords(bytes, dataCodewords) {
+  const bits = [];
+  appendBits(bits, 0b0100, 4);       // Byte mode
+  appendBits(bits, bytes.length, 8);  // Length for version 1-9
+
+  for (const b of bytes) appendBits(bits, b, 8);
+
+  const maxBits = dataCodewords * 8;
+  for (let i = 0; i < 4 && bits.length < maxBits; i++) bits.push(0);
+  while (bits.length % 8 !== 0) bits.push(0);
+
+  const result = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    let val = 0;
+    for (let j = 0; j < 8; j++) val = (val << 1) | bits[i + j];
+    result.push(val);
+  }
+
+  const pads = [0xEC, 0x11];
+  let padIndex = 0;
+  while (result.length < dataCodewords) {
+    result.push(pads[padIndex % 2]);
+    padIndex++;
+  }
+
+  return result;
+}
+
+function drawFinder(x, y, setModule, size) {
+  for (let dy = -1; dy <= 7; dy++) {
+    for (let dx = -1; dx <= 7; dx++) {
+      const xx = x + dx;
+      const yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= size || yy >= size) continue;
+
+      const dark =
+        dx >= 0 && dx <= 6 && dy >= 0 && dy <= 6 &&
+        (dx === 0 || dx === 6 || dy === 0 || dy === 6 ||
+          (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4));
+
+      setModule(xx, yy, dark);
+    }
+  }
+}
+
+function drawAlignment(cx, cy, setModule) {
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const dark = Math.max(Math.abs(dx), Math.abs(dy)) !== 1;
+      setModule(cx + dx, cy + dy, dark);
+    }
+  }
+}
+
+function drawFormatBits(modules, isFunction, size, mask) {
+  const bits = getFormatBits(1, mask); // L hibajavítás = 01
+
+  const set = (x, y, i) => {
+    modules[y][x] = ((bits >>> i) & 1) !== 0;
+    isFunction[y][x] = true;
+  };
+
+  for (let i = 0; i <= 5; i++) set(8, i, i);
+  set(8, 7, 6);
+  set(8, 8, 7);
+  set(7, 8, 8);
+  for (let i = 9; i < 15; i++) set(14 - i, 8, i);
+
+  for (let i = 0; i < 8; i++) set(size - 1 - i, 8, i);
+  for (let i = 8; i < 15; i++) set(8, size - 15 + i, i);
+
+  modules[size - 8][8] = true;
+  isFunction[size - 8][8] = true;
+}
+
+function getFormatBits(eccLevelBits, mask) {
+  let data = (eccLevelBits << 3) | mask;
+  let rem = data << 10;
+  const generator = 0x537;
+
+  for (let i = 14; i >= 10; i--) {
+    if (((rem >>> i) & 1) !== 0) {
+      rem ^= generator << (i - 10);
+    }
+  }
+
+  return ((data << 10) | rem) ^ 0x5412;
+}
+
+function appendBits(arr, val, len) {
+  for (let i = len - 1; i >= 0; i--) {
+    arr.push((val >>> i) & 1);
+  }
+}
+
+function utf8Bytes(str) {
+  return Array.from(new TextEncoder().encode(str));
+}
+
+function reedSolomonDivisor(degree) {
+  const result = Array(degree).fill(0);
+  result[degree - 1] = 1;
+
+  let root = 1;
+  for (let i = 0; i < degree; i++) {
+    for (let j = 0; j < degree; j++) {
+      result[j] = gfMultiply(result[j], root);
+      if (j + 1 < degree) result[j] ^= result[j + 1];
+    }
+    root = gfMultiply(root, 0x02);
+  }
+
+  return result;
+}
+
+function reedSolomonRemainder(data, divisor) {
+  const result = Array(divisor.length).fill(0);
+
+  for (const b of data) {
+    const factor = b ^ result.shift();
+    result.push(0);
+    for (let i = 0; i < divisor.length; i++) {
+      result[i] ^= gfMultiply(divisor[i], factor);
+    }
+  }
+
+  return result;
+}
+
+function gfMultiply(x, y) {
+  let z = 0;
+
+  while (y !== 0) {
+    if ((y & 1) !== 0) z ^= x;
+    x <<= 1;
+    if ((x & 0x100) !== 0) x ^= 0x11D;
+    y >>>= 1;
+  }
+
+  return z;
 }
 
 // Globális függvények az inline onclick miatt

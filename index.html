@@ -203,6 +203,37 @@
       margin:4px 0;
       word-break:break-all;
     }
+    .qr-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      margin-top:12px;
+    }
+    .qr-card{
+      background:rgba(255,255,255,.07);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+    .qr-card b{display:block;margin-bottom:5px}
+    .qr-card svg{
+      width:132px;
+      height:132px;
+      display:block;
+      background:#fff;
+      padding:8px;
+      border-radius:12px;
+      margin-top:8px;
+    }
+    .qr-small svg{
+      width:76px;
+      height:76px;
+      display:block;
+      background:#fff;
+      padding:5px;
+      border-radius:10px;
+      margin:6px 0 10px;
+    }
     table{
       width:100%;
       border-collapse:collapse;
@@ -246,6 +277,15 @@
       .stat-grid{grid-template-columns:1fr 1fr}
       .admin-head{grid-template-columns:1fr}
       .form-grid{grid-template-columns:1fr}
+      .qr-grid{grid-template-columns:1fr}
+    }
+    @media print{
+      body{background:white;color:black}
+      .hero,.tabs,.layout > section,.cart > h2,.cart button,.note{display:none!important}
+      .cart{position:static;box-shadow:none;border:0}
+      .success{display:block!important;color:black;background:white;border:0}
+      .qr-card{break-inside:avoid;color:black;border:1px solid #ddd}
+      .code{color:black;border:1px solid #ddd;background:#f7f7f7}
     }
   </style>
 </head>
@@ -253,11 +293,11 @@
   <div class="wrap">
     <section class="hero">
       <div class="box hero-main">
-        <div class="eyebrow">🎟️ GitHub Pages kompatibilis demo</div>
+        <div class="eyebrow">🎟️ Demo jegyértékesítő</div>
         <h1>Teszt jegyértékesítő rendszer</h1>
         <p>
-          Több jegytípus, kosár, vásárlási adatok, automatikus rendeléskód és jegykód.
-          Az admin felületen látszanak az eladások, árak, kódok és a bevétel.
+          Több jegytípus, kosár, vásárlási adatok, automatikus rendeléskód,
+          jegykód és QR-kód generálás.
         </p>
         <div class="tabs">
           <button class="tab active" data-tab="shop">Vásárlás</button>
@@ -311,7 +351,7 @@
 
           <div id="successBox" class="success hidden"></div>
           <div class="note">
-            Ez statikus demo. A vásárlások a böngésző <b>localStorage</b> tárhelyére mentődnek.
+            Ez demo. A vásárlások a böngésző <b>localStorage</b> tárhelyére mentődnek.
           </div>
         </aside>
       </div>
@@ -376,7 +416,7 @@
                   <th>Rendeléskód</th>
                   <th>Vásárló</th>
                   <th>Jegyek</th>
-                  <th>Jegykódok</th>
+                  <th>Jegykódok + QR</th>
                   <th>Összeg</th>
                   <th>Megjegyzés</th>
                 </tr>
