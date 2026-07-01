@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teszt jegyértékesítő rendszer</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#121a33;
+      --panel2:#172142;
+      --text:#eef3ff;
+      --muted:#9ba8c7;
+      --line:rgba(255,255,255,.12);
+      --accent:#8b5cf6;
+      --accent2:#22c55e;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --radius:18px;
+      --shadow:0 18px 50px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(139,92,246,.38), transparent 34%),
+        radial-gradient(circle at top right, rgba(34,197,94,.18), transparent 30%),
+        var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    a{color:inherit}
+    .wrap{max-width:1120px;margin:0 auto;padding:22px}
+    .hero{
+      display:grid;
+      grid-template-columns:1.4fr .6fr;
+      gap:18px;
+      align-items:stretch;
+      margin-bottom:18px;
+    }
+    .box{
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .hero-main{padding:28px}
+    .eyebrow{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      color:#d7ccff;
+      background:rgba(139,92,246,.16);
+      border:1px solid rgba(139,92,246,.35);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:13px;
+      font-weight:700;
+      margin-bottom:14px;
+    }
+    h1{font-size:clamp(30px,6vw,54px);line-height:1.02;margin:0 0 12px}
+    p{color:var(--muted);line-height:1.55}
+    .hero-card{
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding:22px;
+      background:linear-gradient(145deg,rgba(34,197,94,.18),rgba(139,92,246,.18));
+    }
+    .hero-card strong{font-size:34px}
+    .tabs{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin:18px 0;
+    }
+    .tab{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:11px 15px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .tab.active{background:var(--accent);border-color:transparent}
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+    }
+    .ticket{
+      padding:18px;
+      position:relative;
+      min-height:230px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .ticket:before{
+      content:"";
+      position:absolute;
+      inset:0 0 auto 0;
+      height:5px;
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+    }
+    .ticket h3{font-size:22px;margin:0}
+    .price{font-size:31px;font-weight:950;margin-top:auto}
+    .meta{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{
+      font-size:12px;
+      color:#dbe4ff;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      padding:6px 9px;
+      border-radius:999px;
+    }
+    button,.btn{
+      border:0;
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:900;
+      cursor:pointer;
+      color:white;
+      background:var(--accent);
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    button.secondary{background:rgba(255,255,255,.09);border:1px solid var(--line)}
+    button.green{background:var(--accent2)}
+    button.red{background:var(--danger)}
+    button.warn{background:var(--warn);color:#1b1300}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .layout{
+      display:grid;
+      grid-template-columns:1fr 360px;
+      gap:14px;
+      align-items:start;
+    }
+    .cart{
+      position:sticky;
+      top:14px;
+      padding:18px;
+    }
+    .cart-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      align-items:center;
+      padding:12px 0;
+      border-bottom:1px solid var(--line);
+    }
+    .qty{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .qty button{
+      width:34px;height:34px;padding:0;border-radius:11px;
+      background:rgba(255,255,255,.1);
+      border:1px solid var(--line);
+    }
+    .total{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:22px;
+      font-weight:950;
+      margin:14px 0;
+    }
+    input,select,textarea{
+      width:100%;
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:13px;
+      padding:12px;
+      outline:none;
+      font:inherit;
+    }
+    label{display:block;margin:10px 0 6px;font-weight:800;color:#dbe4ff}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .hidden{display:none!important}
+    .success{
+      padding:16px;
+      background:rgba(34,197,94,.12);
+      border:1px solid rgba(34,197,94,.35);
+      border-radius:16px;
+      margin-top:14px;
+    }
+    .code{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      background:rgba(0,0,0,.22);
+      border:1px solid var(--line);
+      padding:8px 10px;
+      border-radius:10px;
+      display:inline-block;
+      margin:4px 0;
+      word-break:break-all;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:780px;
+    }
+    th,td{
+      text-align:left;
+      padding:11px 10px;
+      border-bottom:1px solid var(--line);
+      vertical-align:top;
+    }
+    th{color:#dbe4ff;font-size:13px}
+    .table-wrap{overflow:auto}
+    .admin-head{
+      display:grid;
+      grid-template-columns:1fr auto auto;
+      gap:10px;
+      align-items:end;
+      padding:18px;
+    }
+    .stat-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .stat{padding:16px}
+    .stat span{display:block;color:var(--muted);font-size:13px}
+    .stat strong{font-size:26px}
+    .note{
+      font-size:13px;
+      color:var(--muted);
+      border-top:1px solid var(--line);
+      padding-top:12px;
+      margin-top:12px;
+    }
+    @media(max-width:900px){
+      .hero,.layout{grid-template-columns:1fr}
+      .grid{grid-template-columns:1fr}
+      .cart{position:static}
+      .stat-grid{grid-template-columns:1fr 1fr}
+      .admin-head{grid-template-columns:1fr}
+      .form-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="box hero-main">
+        <div class="eyebrow">🎟️ GitHub Pages kompatibilis demo</div>
+        <h1>Teszt jegyértékesítő rendszer</h1>
+        <p>
+          Több jegytípus, kosár, vásárlási adatok, automatikus rendeléskód és jegykód.
+          Az admin felületen látszanak az eladások, árak, kódok és a bevétel.
+        </p>
+        <div class="tabs">
+          <button class="tab active" data-tab="shop">Vásárlás</button>
+          <button class="tab" data-tab="admin">Admin</button>
+        </div>
+      </div>
+      <div class="box hero-card">
+        <div>
+          <p>Demo esemény</p>
+          <strong>FestPlay Night</strong>
+          <p>2026. augusztus 15. · Szeged</p>
+        </div>
+        <button class="green" id="scrollTickets">Jegyek megnyitása</button>
+      </div>
+    </section>
+
+    <main id="shopView">
+      <div class="layout">
+        <section>
+          <h2 id="ticketsTitle">Jegytípusok</h2>
+          <div class="grid" id="ticketList"></div>
+        </section>
+
+        <aside class="box cart">
+          <h2>Kosár</h2>
+          <div id="cartItems"></div>
+          <div class="total">
+            <span>Összesen</span>
+            <span id="cartTotal">0 Ft</span>
+          </div>
+
+          <div id="checkoutBox" class="hidden">
+            <h3>Vásárló adatai</h3>
+            <div class="form-grid">
+              <div>
+                <label>Név</label>
+                <input id="buyerName" placeholder="Teszt Elek">
+              </div>
+              <div>
+                <label>E-mail</label>
+                <input id="buyerEmail" type="email" placeholder="teszt@email.hu">
+              </div>
+            </div>
+            <label>Megjegyzés / kuponkód</label>
+            <input id="buyerNote" placeholder="pl. VIP vendég, kuponkód...">
+            <button class="green" id="buyBtn" style="width:100%;margin-top:12px;">Teszt vásárlás lezárása</button>
+          </div>
+
+          <button id="checkoutBtn" style="width:100%;margin-top:10px;">Tovább a vásárláshoz</button>
+          <button class="secondary" id="clearCartBtn" style="width:100%;margin-top:10px;">Kosár ürítése</button>
+
+          <div id="successBox" class="success hidden"></div>
+          <div class="note">
+            Ez statikus demo. A vásárlások a böngésző <b>localStorage</b> tárhelyére mentődnek.
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <main id="adminView" class="hidden">
+      <section class="box admin-head">
+        <div>
+          <h2>Admin felület</h2>
+          <p>Demo jelszó: <span class="code">admin123</span></p>
+          <input id="adminPassword" type="password" placeholder="Admin jelszó">
+        </div>
+        <button id="loginBtn">Belépés</button>
+        <button class="secondary" id="backShopBtn">Vissza a vásárláshoz</button>
+      </section>
+
+      <section id="adminPanel" class="hidden">
+        <div class="stat-grid">
+          <div class="box stat"><span>Rendelések</span><strong id="statOrders">0</strong></div>
+          <div class="box stat"><span>Eladott jegyek</span><strong id="statTickets">0</strong></div>
+          <div class="box stat"><span>Bevétel</span><strong id="statRevenue">0 Ft</strong></div>
+          <div class="box stat"><span>Átlag rendelés</span><strong id="statAvg">0 Ft</strong></div>
+        </div>
+
+        <section class="box" style="padding:18px;margin-bottom:14px;">
+          <h3>Jegytípusok és készlet</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Jegy</th>
+                  <th>Ár</th>
+                  <th>Kód prefix</th>
+                  <th>Kezdő készlet</th>
+                  <th>Eladva</th>
+                  <th>Maradék</th>
+                </tr>
+              </thead>
+              <tbody id="ticketAdminRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="box" style="padding:18px;">
+          <div class="form-grid" style="align-items:end;">
+            <div>
+              <label>Keresés név / email / rendeléskód / jegykód</label>
+              <input id="adminSearch" placeholder="Keresés...">
+            </div>
+            <div>
+              <button class="warn" id="exportBtn">CSV export</button>
+              <button class="red" id="resetBtn">Demo adatok törlése</button>
+            </div>
+          </div>
+
+          <h3>Rendelések</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dátum</th>
+                  <th>Rendeléskód</th>
+                  <th>Vásárló</th>
+                  <th>Jegyek</th>
+                  <th>Jegykódok</th>
+                  <th>Összeg</th>
+                  <th>Megjegyzés</th>
+                </tr>
+              </thead>
+              <tbody id="orderRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
